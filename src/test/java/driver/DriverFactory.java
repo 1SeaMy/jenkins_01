@@ -4,8 +4,11 @@ import com.codeborne.selenide.Browsers;
 import com.codeborne.selenide.Configuration;
 import com.codeborne.selenide.Selenide;
 import com.codeborne.selenide.WebDriverRunner;
-import org.openqa.selenium.*;
+import com.codeborne.selenide.testng.ScreenShooter;
+import org.apache.log4j.Logger;
+import org.openqa.selenium.Dimension;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -23,12 +26,13 @@ public class DriverFactory {
 
     public static String browser;
     static PropertyManager propertyManager = new PropertyManager();
+    static final Logger logger = Logger.getLogger(DriverFactory.class);
 
     public static void initDriver() {
 
         // Get settings from command line
 
-
+        logger.info("Driver yükleniyor....");
         // Check if remote driver
 
         if (Objects.equals(propertyManager.getProperty("BROWSER"), "REMOTE")) {
@@ -41,16 +45,26 @@ public class DriverFactory {
         Configuration.pageLoadStrategy = "eager";
         Configuration.browserSize = "1920x1080";
         Configuration.holdBrowserOpen = false;
-        Configuration.screenshots = false;
+        Configuration.screenshots = true;
         //Configuration.timeout = 10000;
         //Configuration.pageLoadTimeout = 30000;
+        Configuration.reportsFolder = "target/test-results/screenshots";
+
         Configuration.headless = Objects.equals(propertyManager.getProperty("HEADLESS"), "Y");
 
         browser = Objects.equals(propertyManager.getProperty("BROWSER"), null) ? "chrome" : propertyManager.getProperty("BROWSER");
-
+        ScreenShooter.captureSuccessfulTests = true;
         switch (browser) {
             case "CHROME":
                 Configuration.browser = Browsers.CHROME;
+                ChromeOptions options = new ChromeOptions();
+                options.addArguments("--disable-extensions");
+                options.addArguments("--no-sandbox");
+                options.addArguments("--start-incognito");
+                options.setExperimentalOption("excludeSwitches", new String[]{"enable-automation"});
+                DesiredCapabilities capabilities = new DesiredCapabilities();
+                capabilities.setCapability(ChromeOptions.CAPABILITY, options);
+                Configuration.browserCapabilities = capabilities;
                 break;
             case "EDGE":
                 Configuration.browser = Browsers.EDGE;
@@ -113,14 +127,17 @@ public class DriverFactory {
         wait.until(ExpectedConditions.urlContains(urlChunk));
     }
 
+
     public static void clearCookies() {
+        logger.info("Cookies temizleniyor....");
         open(propertyManager.getProperty("APP_URL"));
         Selenide.clearBrowserCookies();
         Selenide.clearBrowserLocalStorage();
     }
 
     public static void close() {
-        currentDriver().quit();
+        logger.info("Browser kapatılıyor....");
+        currentDriver().close();
     }
 }
 
